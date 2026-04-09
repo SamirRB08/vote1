@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Votación Estudiantil</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- ============================================================
+  FIREBASE SDK
+============================================================ -->
+<script type="module">
+  // 1. IMPORTACIONES ÚNICAS DESDE LA RED (CDN)
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getDatabase, ref, push, get, set, onValue
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // 2. CONFIGURACIÓN (Tus credenciales reales)
+  const firebaseConfig = {
+    apiKey: "AIzaSyA6rFSuBRysu-W8E9E0KlQhI5bP6mbwFBs",
+    authDomain: "votacion-estudiantil-2026.firebaseapp.com",
+    databaseURL: "https://votacion-estudiantil-2026-default-rtdb.firebaseio.com",
+    projectId: "votacion-estudiantil-2026",
+    storageBucket: "votacion-estudiantil-2026.firebasestorage.app",
+    messagingSenderId: "469646524541",
+    appId: "1:469646524541:web:123b7addb74ce535b6b114"
+  };
+
+  // 3. DATOS DEL COLEGIO Y CANDIDATOS
+  window.CONFIG = {
+    colegio:      "Instituto Nacional de Educación",
+    anio:         "2026",
+    clave_admin:  "admin2026", 
+    candidatos: [
+      { id: 1, nombre: "Ana García López",    lista: "Lista 1", propuesta: "Más espacios de recreación y wifi estudiantil" },
+      { id: 2, nombre: "Carlos Mendoza Ríos", lista: "Lista 2", propuesta: "Mejora de biblioteca y actividades culturales" },
+      { id: 3, nombre: "Sofía Ramírez Luna",  lista: "Lista 3", propuesta: "Deporte, salud y bienestar estudiantil" }
+    ]
+  };
+
+  // 4. INICIALIZACIÓN SIN DUPLICADOS
+  let database; // Usamos un nombre claro para evitar conflictos con 'db' o 'app'
+  
+  try {
+    const app = initializeApp(firebaseConfig);
+    database = getDatabase(app);
+    
+    // Hacerlo disponible para el resto de funciones
+    window._db = database;
+    window._dbReady = true;
+    console.log("✅ Firebase conectado correctamente");
+  } catch(e) {
+    window._dbReady = false;
+    console.error("❌ Error Firebase:", e);
+  }
+
+  /* ============================================================
+    API DE BASE DE DATOS - FUNCIONES GLOBALES
+  ============================================================ */
+
+  window.fbGuardarVoto = async function(votoObj) {
+    const votosRef = ref(database, 'votos');
+    await push(votosRef, votoObj);
+  };
+
+  window.fbLeerVotos = async function() {
+    const snap = await get(ref(database, 'votos'));
+    if (!snap.exists()) return [];
+    return Object.entries(snap.val()).map(([k, v]) => ({ _key: k, ...v }));
+  };
+
+  window.fbLeerEstado = async function() {
+    const snap = await get(ref(database, 'estado'));
+    return snap.exists() ? snap.val() : { cerrada: false };
+  };
+
+  window.fbGuardarEstado = async function(estadoObj) {
+    await set(ref(database, 'estado'), estadoObj);
+  };
+
+  window.fbEscuchar = function(callback) {
+    onValue(ref(database, '/'), (snap) => {
+      const data = snap.val() || {};
+      const votos = data.votos
+        ? Object.entries(data.votos).map(([k,v]) => ({ _key: k, ...v }))
+        : [];
+      callback({ votos, estado: data.estado || { cerrada: false } });
+    });
+  };
+
+  window.fbDniYaVoto = async function(dni) {
+    const votos = await window.fbLeerVotos();
+    return votos.some(v => v.dni === dni);
+  };
+
+  // Disparar evento cuando todo esté listo
+  document.dispatchEvent(new Event('firebase-listo'));
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --verde: #1a5c3a;
+    --verde-claro: #2d8a5a;
+    --verde-bg: #f0faf5;
+    --dorado: #c9a84c;
+    --dorado-claro: #f0d98a;
+    --gris: #f5f5f2;
+    --gris-borde: #e0ddd6;
+    --texto: #1a1a18;
+    --texto-suave: #5a5a55;
+    --blanco: #ffffff;
+    --rojo: #c0392b;
+    --azul-info: #1a4a7a;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--gris);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* BANNER CONEXIÓN */
+  #banner-conexion {
+    width: 100%;
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 0.82rem;
+    font-weight: 500;
+    display: none;
+  }
+  #banner-conexion.conectando { display:block; background:#fff3cd; color:#856404; }
+  #banner-conexion.error      { display:block; background:#f8d7da; color:#721c24; }
+  #banner-conexion.ok         { display:block; background:#d4edda; color:#155724; animation: fadeout 3s forwards 2s; }
+  @keyframes fadeout { to { opacity:0; height:0; padding:0; } }
+
+  header {
+    width: 100%;
+    background: var(--verde);
+    padding: 18px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 4px solid var(--dorado);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header .logo { display:flex; align-items:center; gap:14px; }
+  header .logo .escudo {
+    width:44px; height:44px; background:var(--dorado); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:22px;
+  }
+  header h1 { font-family:'DM Serif Display',serif; color:var(--blanco); font-size:1.25rem; font-weight:400; }
+  header h1 span {
+    display:block; font-family:'DM Sans',sans-serif; font-size:0.7rem;
+    color:var(--dorado-claro); font-weight:300; letter-spacing:0.08em; text-transform:uppercase;
+  }
+  header .admin-btn {
+    background:transparent; border:1px solid rgba(201,168,76,0.5);
+    color:var(--dorado-claro); padding:6px 16px; border-radius:20px;
+    font-family:'DM Sans',sans-serif; font-size:0.75rem; cursor:pointer; transition:all 0.2s;
+  }
+  header .admin-btn:hover { background:rgba(201,168,76,0.15); border-color:var(--dorado); }
+
+  main { width:100%; max-width:560px; padding:40px 20px 60px; flex:1; }
+
+  .pantalla { display:none; animation:fadeUp 0.35s ease; }
+  .pantalla.activa { display:block; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .card {
+    background:var(--blanco); border:1px solid var(--gris-borde);
+    border-radius:16px; padding:36px; margin-bottom:20px;
+  }
+  .card-title { font-family:'DM Serif Display',serif; font-size:1.6rem; color:var(--verde); margin-bottom:6px; }
+  .card-sub { font-size:0.85rem; color:var(--texto-suave); margin-bottom:28px; line-height:1.5; }
+
+  .input-group { margin-bottom:20px; }
+  .input-group label {
+    display:block; font-size:0.75rem; font-weight:600; color:var(--texto-suave);
+    text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;
+  }
+  .input-group input {
+    width:100%; padding:14px 18px; border:1.5px solid var(--gris-borde); border-radius:10px;
+    font-family:'DM Sans',sans-serif; font-size:1.3rem; letter-spacing:0.12em;
+    color:var(--texto); background:var(--gris); transition:border-color 0.2s; text-align:center;
+  }
+  .input-group input:focus { outline:none; border-color:var(--verde-claro); background:var(--blanco); }
+
+  .btn-primario {
+    width:100%; background:var(--verde); color:var(--blanco); border:none;
+    padding:15px; border-radius:10px; font-family:'DM Sans',sans-serif;
+    font-size:0.95rem; font-weight:500; cursor:pointer; transition:background 0.2s,transform 0.1s;
+  }
+  .btn-primario:hover { background:var(--verde-claro); }
+  .btn-primario:active { transform:scale(0.98); }
+  .btn-primario:disabled { background:#aaa; cursor:not-allowed; }
+
+  .btn-secundario {
+    width:100%; background:transparent; color:var(--texto-suave);
+    border:1px solid var(--gris-borde); padding:12px; border-radius:10px;
+    font-family:'DM Sans',sans-serif; font-size:0.9rem; cursor:pointer; transition:all 0.2s; margin-top:10px;
+  }
+  .btn-secundario:hover { border-color:var(--verde); color:var(--verde); }
+
+  .msg-error {
+    background:#fff5f5; border:1px solid #f5c6c6; border-radius:8px;
+    padding:12px 16px; font-size:0.85rem; color:var(--rojo); margin-bottom:16px; display:none;
+  }
+  .msg-error.visible { display:block; animation:fadeUp 0.2s ease; }
+
+  .dni-badge {
+    display:inline-block; background:var(--verde-bg); border:1px solid #b2dfc8;
+    border-radius:8px; padding:6px 14px; font-size:1rem; font-weight:600;
+    letter-spacing:0.1em; color:var(--verde); margin-bottom:24px;
+  }
+
+  .candidatos-grid { display:flex; flex-direction:column; gap:14px; margin-bottom:24px; }
+
+  .candidato-card {
+    display:flex; align-items:center; gap:18px; padding:18px 20px;
+    border:2px solid var(--gris-borde); border-radius:12px; cursor:pointer;
+    transition:all 0.2s; position:relative; background:var(--blanco);
+  }
+  .candidato-card:hover { border-color:var(--verde-claro); background:var(--verde-bg); }
+  .candidato-card.seleccionado { border-color:var(--verde); background:var(--verde-bg); }
+  .candidato-card.seleccionado::after {
+    content:'✓'; position:absolute; right:18px;
+    width:26px; height:26px; background:var(--verde); color:white;
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:700;
+  }
+
+  .candidato-avatar {
+    width:56px; height:56px; border-radius:50%; display:flex;
+    align-items:center; justify-content:center; font-size:22px;
+    font-weight:700; color:white; flex-shrink:0;
+    font-family:'DM Serif Display',serif;
+  }
+  .av-1{background:var(--verde)} .av-2{background:#1a4a7a} .av-3{background:#7a2d1a}
+
+  .candidato-info { flex:1; }
+  .candidato-nombre { font-weight:600; font-size:1rem; color:var(--texto); margin-bottom:2px; }
+  .candidato-propuesta { font-size:0.8rem; color:var(--texto-suave); }
+  .candidato-numero { font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--texto-suave); margin-bottom:2px; }
+
+  .check-grande {
+    width:80px; height:80px; background:var(--verde); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:36px;
+    margin:0 auto 24px; animation:pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+  }
+  @keyframes pop { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+  .confirmacion-centro { text-align:center; }
+
+  /* SPINNER */
+  .spinner {
+    display:inline-block; width:18px; height:18px;
+    border:2px solid rgba(255,255,255,0.4); border-top-color:#fff;
+    border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; margin-right:8px;
+  }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  /* ADMIN */
+  .admin-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(10,30,10,0.55); z-index:200;
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .admin-overlay.visible { display:flex; }
+
+  .admin-modal {
+    background:var(--blanco); border-radius:16px; padding:36px;
+    width:100%; max-width:500px; max-height:90vh; overflow-y:auto;
+    animation:fadeUp 0.3s ease;
+  }
+
+  .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+  .modal-title { font-family:'DM Serif Display',serif; font-size:1.4rem; color:var(--verde); }
+  .btn-cerrar {
+    background:transparent; border:none; font-size:1.4rem; cursor:pointer;
+    color:var(--texto-suave); padding:4px 8px; border-radius:6px;
+  }
+  .btn-cerrar:hover { background:var(--gris); }
+
+  .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:24px; }
+  .stat-box { background:var(--gris); border-radius:10px; padding:14px; text-align:center; }
+  .stat-num { font-family:'DM Serif Display',serif; font-size:2rem; color:var(--verde); }
+  .stat-label { font-size:0.72rem; color:var(--texto-suave); text-transform:uppercase; letter-spacing:0.06em; margin-top:2px; }
+
+  /* Badge en tiempo real */
+  .badge-live {
+    display:inline-flex; align-items:center; gap:6px;
+    background:#e8f5e9; border:1px solid #a5d6a7; border-radius:20px;
+    padding:4px 12px; font-size:0.75rem; color:#2e7d32; margin-bottom:16px;
+  }
+  .dot-live {
+    width:7px; height:7px; border-radius:50%; background:#43a047;
+    animation:pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .resultado-item { margin-bottom:18px; }
+  .resultado-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .resultado-nombre { font-weight:500; font-size:0.9rem; color:var(--texto); }
+  .resultado-pct { font-weight:600; font-size:0.9rem; color:var(--verde); }
+  .barra-bg { background:var(--gris); border-radius:4px; height:10px; overflow:hidden; }
+  .barra-fill { height:100%; border-radius:4px; background:var(--verde); transition:width 0.8s cubic-bezier(0.22,1,0.36,1); }
+  .barra-fill.b2{background:var(--azul-info)} .barra-fill.b3{background:#7a2d1a}
+
+  .ganador-badge {
+    background:var(--dorado-claro); border:1px solid var(--dorado); border-radius:6px;
+    padding:10px 14px; display:flex; align-items:center; gap:10px;
+    margin-bottom:20px; font-size:0.85rem; color:#5a3d00;
+  }
+  .ganador-badge strong { font-weight:600; }
+
+  .tabla-votos { width:100%; border-collapse:collapse; font-size:0.82rem; margin-top:16px; }
+  .tabla-votos th {
+    background:var(--gris); padding:8px 10px; text-align:left; font-weight:600;
+    color:var(--texto-suave); border-bottom:1px solid var(--gris-borde);
+    font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;
+  }
+  .tabla-votos td { padding:8px 10px; border-bottom:1px solid var(--gris-borde); color:var(--texto); }
+  .tabla-votos tr:last-child td { border-bottom:none; }
+
+  .separador { border:none; border-top:1px solid var(--gris-borde); margin:20px 0; }
+
+  .btn-pdf {
+    width:100%; background:var(--dorado); color:#3a2600; border:none; padding:14px;
+    border-radius:10px; font-family:'DM Sans',sans-serif; font-size:0.9rem;
+    font-weight:600; cursor:pointer; transition:background 0.2s; margin-top:8px;
+  }
+  .btn-pdf:hover { background:#d4b060; }
+
+  .btn-danger {
+    width:100%; background:transparent; color:var(--rojo);
+    border:1px solid #f5c6c6; padding:11px; border-radius:10px;
+    font-family:'DM Sans',sans-serif; font-size:0.85rem;
+    cursor:pointer; transition:all 0.2s; margin-top:8px;
+  }
+  .btn-danger:hover { background:#fff5f5; }
+
+  #admin-login-form { display:block; }
+  #admin-panel { display:none; }
+
+  .votacion-cerrada-banner {
+    background:#fff3cd; border:1px solid #ffc107; border-radius:10px;
+    padding:14px 18px; font-size:0.85rem; color:#856404; text-align:center;
+    margin-bottom:20px; display:none;
+  }
+  .votacion-cerrada-banner.visible { display:block; }
+
+  footer { text-align:center; padding:20px; font-size:0.72rem; color:var(--texto-suave); }
+
+  @media(max-width:480px) {
+    header { padding:14px 20px; }
+    .card { padding:24px 20px; }
+    .admin-modal { padding:24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- BANNER DE CONEXIÓN -->
+<div id="banner-conexion" class="conectando">⏳ Conectando con Firebase...</div>
+
+<header>
+  <div class="logo">
+    <div class="escudo">🏛️</div>
+    <h1>
+      Elecciones Estudiantiles
+      <span>Sistema de votación digital</span>
+    </h1>
+  </div>
+  <button class="admin-btn" onclick="abrirAdmin()">⚙ Administrador</button>
+</header>
+
+<main>
+  <div class="votacion-cerrada-banner" id="banner-cerrada">
+    🔒 La votación se encuentra cerrada por el administrador.
+  </div>
+
+  <!-- PANTALLA 1: DNI -->
+  <div class="pantalla activa" id="pan-dni">
+    <div class="card">
+      <p class="card-title">Ingresa tu DNI</p>
+      <p class="card-sub">Escribe tu número de documento de identidad para acceder a la votación.</p>
+      <div class="msg-error" id="err-dni"></div>
+      <div class="input-group">
+        <label>Número de DNI</label>
+        <input type="text" id="input-dni" maxlength="15" placeholder="00000000"
+          oninput="this.value=this.value.replace(/[^0-9]/,'')"
+          onkeydown="if(event.key==='Enter') validarDni()">
+      </div>
+      <button class="btn-primario" id="btn-continuar" onclick="validarDni()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA 2: VOTACIÓN -->
+  <div class="pantalla" id="pan-votar">
+    <div class="card">
+      <p class="card-title">Emite tu voto</p>
+      <p class="card-sub">Elige al candidato de tu preferencia. Solo puedes votar una vez.</p>
+      <div class="dni-badge" id="display-dni">DNI: —</div>
+      <div class="msg-error" id="err-voto"></div>
+      <div class="candidatos-grid" id="lista-candidatos"></div>
+      <button class="btn-primario" id="btn-votar" onclick="confirmarVoto()">Emitir mi voto</button>
+      <button class="btn-secundario" onclick="irA('pan-dni')">← Volver</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA 3: CONFIRMACIÓN -->
+  <div class="pantalla" id="pan-ok">
+    <div class="card">
+      <div class="confirmacion-centro">
+        <div class="check-grande">✓</div>
+        <p class="card-title" style="text-align:center;margin-bottom:10px">¡Voto registrado!</p>
+        <p class="card-sub" style="text-align:center">
+          Tu voto fue guardado en la nube exitosamente.<br>
+          Gracias por participar en las elecciones estudiantiles.
+        </p>
+        <p style="font-size:0.82rem;color:var(--verde);font-weight:500;margin:16px 0 24px;text-align:center" id="confirm-candidato"></p>
+        <button class="btn-primario" onclick="nuevoVoto()">Siguiente votante</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>Sistema de votación estudiantil · Datos sincronizados en tiempo real con Firebase</footer>
+
+<!-- MODAL ADMINISTRADOR -->
+<div class="admin-overlay" id="admin-overlay">
+  <div class="admin-modal">
+
+    <!-- LOGIN -->
+    <div id="admin-login-form">
+      <div class="modal-header">
+        <span class="modal-title">Administrador</span>
+        <button class="btn-cerrar" onclick="cerrarAdmin()">✕</button>
+      </div>
+      <div class="input-group">
+        <label>Contraseña de administrador</label>
+        <input type="password" id="input-clave" placeholder="••••••••"
+          onkeydown="if(event.key==='Enter') loginAdmin()">
+      </div>
+      <div class="msg-error" id="err-admin"></div>
+      <button class="btn-primario" onclick="loginAdmin()">Acceder</button>
+    </div>
+
+    <!-- PANEL -->
+    <div id="admin-panel">
+      <div class="modal-header">
+        <span class="modal-title">Panel de resultados</span>
+        <button class="btn-cerrar" onclick="cerrarAdmin()">✕</button>
+      </div>
+
+      <!-- Live badge -->
+      <div class="badge-live"><div class="dot-live"></div> Actualizando en tiempo real</div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-num" id="stat-total">0</div>
+          <div class="stat-label">Votos totales</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" id="stat-ganador-votos">—</div>
+          <div class="stat-label">Votos ganador</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" id="stat-participacion">—</div>
+          <div class="stat-label">% ganador</div>
+        </div>
+      </div>
+
+      <!-- Ganador -->
+      <div class="ganador-badge" id="ganador-badge" style="display:none">
+        <span style="font-size:1.4rem">🏆</span>
+        <div>
+          <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Candidato ganador</div>
+          <strong id="ganador-nombre">—</strong>
+        </div>
+      </div>
+
+      <!-- Barras -->
+      <div id="barras-resultados"></div>
+
+      <hr class="separador">
+
+      <!-- Tabla votantes -->
+      <p style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--texto-suave);margin-bottom:12px">Registro de votantes</p>
+      <div style="max-height:200px;overflow-y:auto;border:1px solid var(--gris-borde);border-radius:8px">
+        <table class="tabla-votos">
+          <thead>
+            <tr><th>#</th><th>DNI</th><th>Candidato</th><th>Hora</th></tr>
+          </thead>
+          <tbody id="tbody-votantes"></tbody>
+        </table>
+      </div>
+
+      <hr class="separador">
+
+      <!-- Controles -->
+      <label style="display:flex;align-items:center;gap:10px;font-size:0.85rem;cursor:pointer;margin-bottom:16px">
+        <input type="checkbox" id="chk-cerrar" onchange="toggleCerrar(this.checked)"
+          style="width:16px;height:16px;accent-color:var(--verde)">
+        <span style="color:var(--texto)">Cerrar votación (bloquear nuevos votos)</span>
+      </label>
+
+      <button class="btn-pdf" onclick="descargarPDF()">📄 Descargar reporte en PDF</button>
+      <button class="btn-danger" onclick="reiniciarVotos()">🗑 Reiniciar todos los votos</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+  ESTADO LOCAL
+============================================================ */
+let dniActual = '';
+let candidatoSeleccionado = null;
+let _datosActuales = { votos: [], estado: { cerrada: false } };
+let _escuchaActiva = false;
+
+/* ============================================================
+  ESPERAR FIREBASE Y ARRANCAR
+============================================================ */
+document.addEventListener('firebase-listo', async () => {
+  const banner = document.getElementById('banner-conexion');
+
+  if (!window._dbReady) {
+    banner.className = 'error';
+    banner.textContent = '❌ Error al conectar con Firebase. Verifica las credenciales en el código.';
+    return;
+  }
+
+  banner.className = 'ok';
+  banner.textContent = '✅ Conectado con Firebase correctamente';
+
+  // Cargar estado inicial
+  try {
+    const estado = await window.fbLeerEstado();
+    _datosActuales.estado = estado;
+    aplicarEstado(estado);
+  } catch(e) { console.warn("No se pudo leer estado:", e); }
+
+  renderCandidatos();
+});
+
+/* ============================================================
+  RENDER CANDIDATOS
+============================================================ */
+function renderCandidatos() {
+  const clases = ['av-1','av-2','av-3'];
+  document.getElementById('lista-candidatos').innerHTML =
+    CONFIG.candidatos.map((c,i) => `
+      <div class="candidato-card" id="cand-${c.id}" onclick="seleccionarCandidato(${c.id})">
+        <div class="candidato-avatar ${clases[i]||'av-1'}">${c.nombre.charAt(0)}</div>
+        <div class="candidato-info">
+          <div class="candidato-numero">${c.lista}</div>
+          <div class="candidato-nombre">${c.nombre}</div>
+          <div class="candidato-propuesta">${c.propuesta}</div>
+        </div>
+      </div>`).join('');
+}
+
+function aplicarEstado(estado) {
+  if (estado && estado.cerrada) {
+    document.getElementById('banner-cerrada').classList.add('visible');
+  } else {
+    document.getElementById('banner-cerrada').classList.remove('visible');
+  }
+}
+
+/* ============================================================
+  FLUJO VOTACIÓN
+============================================================ */
+function irA(id) {
+  document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
+  document.getElementById(id).classList.add('activa');
+}
+
+async function validarDni() {
+  const dni = document.getElementById('input-dni').value.trim();
+  const errEl = document.getElementById('err-dni');
+  const btn = document.getElementById('btn-continuar');
+  errEl.classList.remove('visible');
+
+  if (!dni || dni.length < 6) {
+    errEl.textContent = 'Por favor ingresa un DNI válido (mínimo 6 dígitos).';
+    errEl.classList.add('visible');
+    return;
+  }
+
+  if (!window._dbReady) {
+    errEl.textContent = 'Sin conexión a Firebase. Verifica las credenciales.';
+    errEl.classList.add('visible');
+    return;
+  }
+
+  // Leer estado actualizado
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Verificando...';
+
+  try {
+    const estado = await window.fbLeerEstado();
+    if (estado && estado.cerrada) {
+      errEl.textContent = 'La votación está cerrada. No se aceptan nuevos votos.';
+      errEl.classList.add('visible');
+      return;
+    }
+
+    const yaVoto = await window.fbDniYaVoto(dni);
+    if (yaVoto) {
+      errEl.textContent = `El DNI ${dni} ya emitió su voto. Cada alumno solo puede votar una vez.`;
+      errEl.classList.add('visible');
+      return;
+    }
+
+    dniActual = dni;
+    candidatoSeleccionado = null;
+    document.getElementById('display-dni').textContent = `DNI: ${dni}`;
+    document.querySelectorAll('.candidato-card').forEach(c => c.classList.remove('seleccionado'));
+    document.getElementById('err-voto').classList.remove('visible');
+    irA('pan-votar');
+
+  } catch(e) {
+    errEl.textContent = 'Error de conexión. Intenta de nuevo.';
+    errEl.classList.add('visible');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Continuar →';
+  }
+}
+
+function seleccionarCandidato(id) {
+  candidatoSeleccionado = id;
+  document.querySelectorAll('.candidato-card').forEach(c => c.classList.remove('seleccionado'));
+  document.getElementById(`cand-${id}`).classList.add('seleccionado');
+}
+
+async function confirmarVoto() {
+  const errEl = document.getElementById('err-voto');
+  const btn = document.getElementById('btn-votar');
+  errEl.classList.remove('visible');
+
+  if (!candidatoSeleccionado) {
+    errEl.textContent = 'Debes seleccionar un candidato antes de votar.';
+    errEl.classList.add('visible');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Guardando voto...';
+
+  try {
+    const ahora = new Date();
+    await window.fbGuardarVoto({
+      dni: dniActual,
+      candidato_id: candidatoSeleccionado,
+      hora: ahora.toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' }),
+      fecha: ahora.toLocaleDateString('es')
+    });
+
+    const cand = CONFIG.candidatos.find(c => c.id === candidatoSeleccionado);
+    document.getElementById('confirm-candidato').textContent =
+      `Votaste por: ${cand.nombre} (${cand.lista})`;
+    irA('pan-ok');
+
+  } catch(e) {
+    errEl.textContent = 'Error al guardar el voto. Verifica la conexión e intenta de nuevo.';
+    errEl.classList.add('visible');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Emitir mi voto';
+  }
+}
+
+function nuevoVoto() {
+  dniActual = '';
+  candidatoSeleccionado = null;
+  document.getElementById('input-dni').value = '';
+  document.getElementById('err-dni').classList.remove('visible');
+  irA('pan-dni');
+}
+
+/* ============================================================
+  ADMINISTRADOR
+============================================================ */
+function abrirAdmin() {
+  document.getElementById('admin-login-form').style.display = 'block';
+  document.getElementById('admin-panel').style.display = 'none';
+  document.getElementById('input-clave').value = '';
+  document.getElementById('err-admin').classList.remove('visible');
+  document.getElementById('admin-overlay').classList.add('visible');
+}
+
+function cerrarAdmin() {
+  document.getElementById('admin-overlay').classList.remove('visible');
+}
+
+function loginAdmin() {
+  const clave = document.getElementById('input-clave').value;
+  if (clave !== CONFIG.clave_admin) {
+    const e = document.getElementById('err-admin');
+    e.textContent = 'Contraseña incorrecta.';
+    e.classList.add('visible');
+    return;
+  }
+  document.getElementById('admin-login-form').style.display = 'none';
+  document.getElementById('admin-panel').style.display = 'block';
+  iniciarEscuchaAdmin();
+}
+
+// Escucha en tiempo real solo cuando el admin está abierto
+function iniciarEscuchaAdmin() {
+  if (_escuchaActiva) return;
+  _escuchaActiva = true;
+  window.fbEscuchar((data) => {
+    _datosActuales = data;
+    aplicarEstado(data.estado);
+    renderPanel(data);
+    document.getElementById('chk-cerrar').checked = !!(data.estado && data.estado.cerrada);
+  });
+}
+
+function renderPanel(data) {
+  const votos = data.votos || [];
+  const total = votos.length;
+
+  document.getElementById('stat-total').textContent = total;
+
+  const conteo = {};
+  CONFIG.candidatos.forEach(c => conteo[c.id] = 0);
+  votos.forEach(v => { if (conteo[v.candidato_id] !== undefined) conteo[v.candidato_id]++; });
+
+  let maxV = 0, ganadorId = null;
+  CONFIG.candidatos.forEach(c => { if (conteo[c.id] > maxV) { maxV = conteo[c.id]; ganadorId = c.id; } });
+
+  if (total > 0 && ganadorId) {
+    const g = CONFIG.candidatos.find(c => c.id === ganadorId);
+    document.getElementById('ganador-badge').style.display = 'flex';
+    document.getElementById('ganador-nombre').textContent = `${g.nombre} — ${conteo[ganadorId]} votos`;
+    document.getElementById('stat-ganador-votos').textContent = conteo[ganadorId];
+    document.getElementById('stat-participacion').textContent = Math.round((conteo[ganadorId]/total)*100) + '%';
+  } else {
+    document.getElementById('ganador-badge').style.display = 'none';
+    document.getElementById('stat-ganador-votos').textContent = '—';
+    document.getElementById('stat-participacion').textContent = '—';
+  }
+
+  const clasesBarra = ['','b2','b3'];
+  document.getElementById('barras-resultados').innerHTML = CONFIG.candidatos.map((c,i) => {
+    const v = conteo[c.id];
+    const p = total > 0 ? Math.round((v/total)*100) : 0;
+    return `<div class="resultado-item">
+      <div class="resultado-header">
+        <span class="resultado-nombre">${c.nombre} <span style="font-size:.75rem;color:var(--texto-suave)">(${c.lista})</span></span>
+        <span class="resultado-pct">${v} votos · ${p}%</span>
+      </div>
+      <div class="barra-bg"><div class="barra-fill ${clasesBarra[i]}" style="width:${p}%"></div></div>
+    </div>`;
+  }).join('');
+
+  const tbody = document.getElementById('tbody-votantes');
+  if (votos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--texto-suave);padding:16px">No hay votos registrados aún.</td></tr>';
+  } else {
+    tbody.innerHTML = [...votos].reverse().map((v,i) => {
+      const c = CONFIG.candidatos.find(x => x.id === v.candidato_id);
+      return `<tr>
+        <td>${votos.length - i}</td>
+        <td style="font-family:monospace;letter-spacing:.05em">${v.dni}</td>
+        <td>${c ? c.nombre : '—'}</td>
+        <td style="color:var(--texto-suave)">${v.hora || '—'}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+async function toggleCerrar(cerrada) {
+  try {
+    await window.fbGuardarEstado({ cerrada });
+    aplicarEstado({ cerrada });
+  } catch(e) { console.error("Error al cambiar estado:", e); }
+}
+
+async function reiniciarVotos() {
+  if (!confirm('¿Estás seguro? Esto eliminará TODOS los votos. No se puede deshacer.')) return;
+  try {
+    const { getDatabase, ref, remove } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
+    const { ref: dbRef, remove: dbRemove } = { ref, remove };
+    // Limpiar votos y estado
+    await window.fbGuardarEstado({ cerrada: false });
+    const snap = await window.fbLeerVotos();
+    // Usando set para limpiar todo el nodo de votos
+    const { set } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
+    const dbModule = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
+    await dbModule.set(dbModule.ref(window._db, 'votos'), null);
+    document.getElementById('banner-cerrada').classList.remove('visible');
+    alert('Votos reiniciados correctamente.');
+  } catch(e) {
+    console.error(e);
+    alert('Error al reiniciar. Intenta de nuevo.');
+  }
+}
+
+/* ============================================================
+  EXPORTAR PDF
+============================================================ */
+function descargarPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const votos = _datosActuales.votos || [];
+  const total = votos.length;
+  const conteo = {};
+  CONFIG.candidatos.forEach(c => conteo[c.id] = 0);
+  votos.forEach(v => { if (conteo[v.candidato_id] !== undefined) conteo[v.candidato_id]++; });
+
+  let maxV = 0, ganadorId = null;
+  CONFIG.candidatos.forEach(c => { if (conteo[c.id] > maxV) { maxV = conteo[c.id]; ganadorId = c.id; } });
+  const ganador = ganadorId ? CONFIG.candidatos.find(c => c.id === ganadorId) : null;
+
+  const fechaHoy = new Date().toLocaleDateString('es',{year:'numeric',month:'long',day:'numeric'});
+  const horaHoy  = new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+  const margen = 20, anchoUtil = 170;
+  let y = margen;
+
+  doc.setFillColor(26,92,58); doc.rect(0,0,210,38,'F');
+  doc.setFillColor(201,168,76); doc.rect(0,38,210,2,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text('REPORTE DE ELECCIONES ESTUDIANTILES',105,15,{align:'center'});
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(CONFIG.colegio,105,22,{align:'center'});
+  doc.text(`Año ${CONFIG.anio}   ·   Generado el ${fechaHoy} a las ${horaHoy}`,105,29,{align:'center'});
+
+  y = 50;
+  doc.setTextColor(26,92,58); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('RESUMEN GENERAL',margen,y); y += 8;
+
+  const cajas = [
+    {label:'Total de votos', valor:String(total)},
+    {label:'Candidatos',     valor:String(CONFIG.candidatos.length)},
+    {label:'Estado',         valor:_datosActuales.estado?.cerrada ? 'Cerrada':'Abierta'}
+  ];
+  const anchoCaja = anchoUtil/3 - 4;
+  cajas.forEach((c,i) => {
+    const x = margen + i*(anchoCaja+6);
+    doc.setFillColor(240,250,245); doc.roundedRect(x,y,anchoCaja,22,3,3,'FD');
+    doc.setFontSize(16); doc.setFont('helvetica','bold'); doc.setTextColor(26,92,58);
+    doc.text(c.valor, x+anchoCaja/2, y+12, {align:'center'});
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(100,100,95);
+    doc.text(c.label.toUpperCase(), x+anchoCaja/2, y+19, {align:'center'});
+  });
+  y += 30;
+
+  if (ganador && total > 0) {
+    doc.setFillColor(240,217,138); doc.setDrawColor(201,168,76); doc.setLineWidth(0.5);
+    doc.roundedRect(margen,y,anchoUtil,16,3,3,'FD');
+    doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(90,61,0);
+    doc.text('GANADOR:',margen+6,y+7);
+    doc.setFont('helvetica','normal');
+    doc.text(`${ganador.nombre}  (${conteo[ganadorId]} votos · ${Math.round((conteo[ganadorId]/total)*100)}%)`,margen+38,y+7);
+    y += 22;
+  }
+
+  doc.setTextColor(26,92,58); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('RESULTADOS POR CANDIDATO',margen,y); y += 7;
+
+  CONFIG.candidatos.forEach((c,i) => {
+    const v = conteo[c.id];
+    const p = total > 0 ? Math.round((v/total)*100) : 0;
+    const cols = [[26,92,58],[26,74,122],[122,45,26]];
+    doc.setFontSize(9); doc.setFont('helvetica', c.id===ganadorId&&total>0?'bold':'normal'); doc.setTextColor(26,26,24);
+    doc.text(`${c.lista} — ${c.nombre}`,margen,y+4);
+    doc.setTextColor(100,100,95); doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text(`${v} votos · ${p}%`,190,y+4,{align:'right'});
+    doc.setFillColor(230,230,225); doc.roundedRect(margen,y+6,anchoUtil,5,1,1,'F');
+    if(p>0){ doc.setFillColor(...(cols[i]||cols[0])); doc.roundedRect(margen,y+6,anchoUtil*p/100,5,1,1,'F'); }
+    y += 16;
+  });
+  y += 6;
+
+  if (votos.length > 0) {
+    doc.setTextColor(26,92,58); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text('REGISTRO DE VOTANTES',margen,y); y += 7;
+    doc.setFillColor(26,92,58); doc.rect(margen,y,anchoUtil,8,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    [['#',margen+2],['DNI',margen+14],['Candidato votado',margen+80],['Hora',margen+148]].forEach(([h,x])=>doc.text(h,x,y+5.5));
+    y += 8;
+
+    votos.forEach((v,idx) => {
+      if(y>270){ doc.addPage(); y=margen; }
+      const c = CONFIG.candidatos.find(x=>x.id===v.candidato_id);
+      doc.setFillColor(...(idx%2===0?[248,248,245]:[255,255,255]));
+      doc.rect(margen,y,anchoUtil,7,'F');
+      doc.setTextColor(40,40,38); doc.setFont('helvetica','normal'); doc.setFontSize(8);
+      doc.text(String(idx+1),margen+2,y+5);
+      doc.text(v.dni,margen+14,y+5);
+      doc.text(c?c.nombre:'—',margen+80,y+5);
+      doc.text(v.hora||'—',margen+148,y+5);
+      doc.setDrawColor(230,230,225); doc.setLineWidth(0.2);
+      doc.line(margen,y+7,margen+anchoUtil,y+7);
+      y += 7;
+    });
+  }
+
+  const totalPags = doc.internal.getNumberOfPages();
+  for(let p=1;p<=totalPags;p++){
+    doc.setPage(p); doc.setFontSize(7); doc.setTextColor(150,150,145); doc.setFont('helvetica','normal');
+    doc.text(`${CONFIG.colegio} · Reporte generado el ${fechaHoy}`,margen,292);
+    doc.text(`Página ${p} de ${totalPags}`,190,292,{align:'right'});
+    doc.setDrawColor(200,200,195); doc.setLineWidth(0.3); doc.line(margen,288,190,288);
+  }
+
+  doc.save(`resultados-elecciones-${CONFIG.anio}.pdf`);
+}
+
+// Cierra modal al hacer clic fuera
+document.getElementById('admin-overlay').addEventListener('click', function(e){
+  if(e.target===this) cerrarAdmin();
+});
+</script>
+</body>
+</html>
