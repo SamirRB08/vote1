@@ -33,10 +33,9 @@
     anio:         "2026",
     clave_admin:  "admin2026", 
     candidatos: [
-      { id: 1, nombre: "Ana García López",    lista: "Lista 1", propuesta: "Más espacios de recreación y wifi estudiantil" },
-      { id: 2, nombre: "Carlos Mendoza Ríos", lista: "Lista 2", propuesta: "Mejora de biblioteca y actividades culturales" },
-      { id: 3, nombre: "Sofía Ramírez Luna",  lista: "Lista 3", propuesta: "Deporte, salud y bienestar estudiantil" }
-    ]
+  { id: 1, nombre: "Ashley Fernanda Briceño Reyes", lista: "Lista 1", propuesta: "Una presidenta no sigue caminos, los crea" },
+  { id: 2, nombre: "Jeancarlo Sauceda", lista: "Lista 2", propuesta: "Movimiento impulso" }
+]
   };
 
   // 4. INICIALIZACIÓN SIN DUPLICADOS
@@ -559,7 +558,7 @@ document.addEventListener('firebase-listo', async () => {
   RENDER CANDIDATOS
 ============================================================ */
 function renderCandidatos() {
-  const clases = ['av-1','av-2','av-3'];
+  const clases = ['av-1','av-2'];
   document.getElementById('lista-candidatos').innerHTML =
     CONFIG.candidatos.map((c,i) => `
       <div class="candidato-card" id="cand-${c.id}" onclick="seleccionarCandidato(${c.id})">
@@ -759,7 +758,7 @@ function renderPanel(data) {
     document.getElementById('stat-participacion').textContent = '—';
   }
 
-  const clasesBarra = ['','b2','b3'];
+  const clasesBarra = ['','b2'];
   document.getElementById('barras-resultados').innerHTML = CONFIG.candidatos.map((c,i) => {
     const v = conteo[c.id];
     const p = total > 0 ? Math.round((v/total)*100) : 0;
@@ -881,7 +880,7 @@ function descargarPDF() {
   CONFIG.candidatos.forEach((c,i) => {
     const v = conteo[c.id];
     const p = total > 0 ? Math.round((v/total)*100) : 0;
-    const cols = [[26,92,58],[26,74,122],[122,45,26]];
+    const cols = [[26,92,58],[26,74,122]];
     doc.setFontSize(9); doc.setFont('helvetica', c.id===ganadorId&&total>0?'bold':'normal'); doc.setTextColor(26,26,24);
     doc.text(`${c.lista} — ${c.nombre}`,margen,y+4);
     doc.setTextColor(100,100,95); doc.setFont('helvetica','normal'); doc.setFontSize(8);
