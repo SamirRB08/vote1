@@ -6,17 +6,12 @@
 <title>Votación Estudiantil</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<!-- ============================================================
-  FIREBASE SDK
-============================================================ -->
 <script type="module">
-  // 1. IMPORTACIONES ÚNICAS DESDE LA RED (CDN)
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
     getDatabase, ref, push, get, set, onValue
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  // 2. CONFIGURACIÓN (Tus credenciales reales)
   const firebaseConfig = {
     apiKey: "AIzaSyA6rFSuBRysu-W8E9E0KlQhI5bP6mbwFBs",
     authDomain: "votacion-estudiantil-2026.firebaseapp.com",
@@ -27,36 +22,33 @@
     appId: "1:469646524541:web:123b7addb74ce535b6b114"
   };
 
-  // 3. DATOS DEL COLEGIO Y CANDIDATOS
   window.CONFIG = {
-    colegio:      "Instituto Nacional de Educación",
-    anio:         "2026",
-    clave_admin:  "admin2026", 
+    colegio:     "Instituto Nacional de Educación",
+    anio:        "2026",
+    clave_admin: "admin2026",
     candidatos: [
-  { id: 1, nombre: "Ashley Fernanda Briceño Reyes", lista: "Lista 1", propuesta: "Una presidenta no sigue caminos, los crea" },
-  { id: 2, nombre: "Jeancarlo Sauceda", lista: "Lista 2", propuesta: "Movimiento impulso" }
-]
+      { id: 1,  nombre: "Daniela Michelle Padilla Zamora",   grado: "10° Contaduría y Finanzas",  propuesta: "Lista 1",  avatar: "D" },
+      { id: 2,  nombre: "Fani Leticia Martínez Castejón",    grado: "11° Contaduría y Finanzas",  propuesta: "Lista 2",  avatar: "F" },
+      { id: 3,  nombre: "Azly Nazareth Moreno Castellanos",  grado: "12° Contaduría y Finanzas",  propuesta: "Lista 3",  avatar: "A" },
+      { id: 4,  nombre: "Arely Alexandra Godoy Irías",       grado: "10° Informática",            propuesta: "Lista 4",  avatar: "A" },
+      { id: 5,  nombre: "Freddy de Jesús Irías Fonseca",     grado: "11° Informática",            propuesta: "Lista 5",  avatar: "F" },
+      { id: 6,  nombre: "Carlos Roney Castellanos Arriaga",  grado: "12° Informática",            propuesta: "Lista 6",  avatar: "C" },
+      { id: 7,  nombre: "Jesús Daniel Maradiga Castellano",  grado: "11° BCH",                    propuesta: "Lista 7",  avatar: "J" },
+      { id: 99, nombre: "Voto en Blanco",                    grado: "",                           propuesta: "Ninguno",  avatar: "○", esBlanco: true }
+    ]
   };
 
-  // 4. INICIALIZACIÓN SIN DUPLICADOS
-  let database; // Usamos un nombre claro para evitar conflictos con 'db' o 'app'
-  
+  let database;
   try {
     const app = initializeApp(firebaseConfig);
     database = getDatabase(app);
-    
-    // Hacerlo disponible para el resto de funciones
     window._db = database;
     window._dbReady = true;
-    console.log("✅ Firebase conectado correctamente");
+    console.log("✅ Firebase conectado");
   } catch(e) {
     window._dbReady = false;
     console.error("❌ Error Firebase:", e);
   }
-
-  /* ============================================================
-    API DE BASE DE DATOS - FUNCIONES GLOBALES
-  ============================================================ */
 
   window.fbGuardarVoto = async function(votoObj) {
     const votosRef = ref(database, 'votos');
@@ -93,25 +85,34 @@
     return votos.some(v => v.dni === dni);
   };
 
-  // Disparar evento cuando todo esté listo
   document.dispatchEvent(new Event('firebase-listo'));
 </script>
+
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
   :root {
-    --verde: #1a5c3a;
-    --verde-claro: #2d8a5a;
-    --verde-bg: #f0faf5;
-    --dorado: #c9a84c;
+    --verde:        #1a5c3a;
+    --verde-claro:  #2d8a5a;
+    --verde-bg:     #f0faf5;
+    --dorado:       #c9a84c;
     --dorado-claro: #f0d98a;
-    --gris: #f5f5f2;
-    --gris-borde: #e0ddd6;
-    --texto: #1a1a18;
-    --texto-suave: #5a5a55;
-    --blanco: #ffffff;
-    --rojo: #c0392b;
-    --azul-info: #1a4a7a;
+    --gris:         #f5f5f2;
+    --gris-borde:   #e0ddd6;
+    --texto:        #1a1a18;
+    --texto-suave:  #5a5a55;
+    --blanco:       #ffffff;
+    --rojo:         #c0392b;
+    --azul-info:    #1a4a7a;
+
+    /* colores avatar por índice */
+    --av0: #1a5c3a;
+    --av1: #1a4a7a;
+    --av2: #6b3fa0;
+    --av3: #a0563f;
+    --av4: #2d7a6b;
+    --av5: #7a2d5c;
+    --av6: #4a6a1a;
   }
 
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -125,31 +126,20 @@
     align-items: center;
   }
 
-  /* BANNER CONEXIÓN */
   #banner-conexion {
-    width: 100%;
-    padding: 10px 20px;
-    text-align: center;
-    font-size: 0.82rem;
-    font-weight: 500;
-    display: none;
+    width:100%; padding:10px 20px; text-align:center;
+    font-size:0.82rem; font-weight:500; display:none;
   }
   #banner-conexion.conectando { display:block; background:#fff3cd; color:#856404; }
   #banner-conexion.error      { display:block; background:#f8d7da; color:#721c24; }
-  #banner-conexion.ok         { display:block; background:#d4edda; color:#155724; animation: fadeout 3s forwards 2s; }
+  #banner-conexion.ok         { display:block; background:#d4edda; color:#155724; animation:fadeout 3s forwards 2s; }
   @keyframes fadeout { to { opacity:0; height:0; padding:0; } }
 
   header {
-    width: 100%;
-    background: var(--verde);
-    padding: 18px 40px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 4px solid var(--dorado);
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    width:100%; background:var(--verde); padding:18px 40px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:4px solid var(--dorado);
+    position:sticky; top:0; z-index:100;
   }
   header .logo { display:flex; align-items:center; gap:14px; }
   header .logo .escudo {
@@ -168,7 +158,7 @@
   }
   header .admin-btn:hover { background:rgba(201,168,76,0.15); border-color:var(--dorado); }
 
-  main { width:100%; max-width:560px; padding:40px 20px 60px; flex:1; }
+  main { width:100%; max-width:600px; padding:40px 20px 60px; flex:1; }
 
   .pantalla { display:none; animation:fadeUp 0.35s ease; }
   .pantalla.activa { display:block; }
@@ -221,44 +211,78 @@
     letter-spacing:0.1em; color:var(--verde); margin-bottom:24px;
   }
 
-  .candidatos-grid { display:flex; flex-direction:column; gap:14px; margin-bottom:24px; }
+  /* contador candidatos */
+  .candidatos-header {
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;
+  }
+  .candidatos-header p {
+    font-size:0.75rem; font-weight:600; text-transform:uppercase;
+    letter-spacing:0.08em; color:var(--texto-suave);
+  }
+  .candidatos-header span {
+    font-size:0.72rem; color:var(--texto-suave);
+    background:var(--gris); border:1px solid var(--gris-borde);
+    border-radius:20px; padding:3px 10px;
+  }
+
+  .candidatos-grid { display:flex; flex-direction:column; gap:10px; margin-bottom:24px; }
 
   .candidato-card {
-    display:flex; align-items:center; gap:18px; padding:18px 20px;
+    display:flex; align-items:center; gap:16px; padding:14px 18px;
     border:2px solid var(--gris-borde); border-radius:12px; cursor:pointer;
     transition:all 0.2s; position:relative; background:var(--blanco);
   }
   .candidato-card:hover { border-color:var(--verde-claro); background:var(--verde-bg); }
   .candidato-card.seleccionado { border-color:var(--verde); background:var(--verde-bg); }
   .candidato-card.seleccionado::after {
-    content:'✓'; position:absolute; right:18px;
-    width:26px; height:26px; background:var(--verde); color:white;
+    content:'✓'; position:absolute; right:16px;
+    width:24px; height:24px; background:var(--verde); color:white;
     border-radius:50%; display:flex; align-items:center; justify-content:center;
-    font-size:14px; font-weight:700;
+    font-size:13px; font-weight:700;
   }
 
+  /* Voto en blanco — estilo diferenciado */
+  .candidato-card.voto-blanco {
+    border-style:dashed; border-color:#ccc; background:#fafafa;
+  }
+  .candidato-card.voto-blanco:hover { border-color:#999; background:#f5f5f5; }
+  .candidato-card.voto-blanco.seleccionado { border-color:#888; background:#f0f0f0; }
+  .candidato-card.voto-blanco.seleccionado::after { background:#888; }
+
   .candidato-avatar {
-    width:56px; height:56px; border-radius:50%; display:flex;
-    align-items:center; justify-content:center; font-size:22px;
+    width:48px; height:48px; border-radius:50%; display:flex;
+    align-items:center; justify-content:center; font-size:18px;
     font-weight:700; color:white; flex-shrink:0;
     font-family:'DM Serif Display',serif;
   }
-  .av-1{background:var(--verde)} .av-2{background:#1a4a7a} .av-3{background:#7a2d1a}
+  .av-blanco { background:#bbb; font-size:22px; }
 
-  .candidato-info { flex:1; }
-  .candidato-nombre { font-weight:600; font-size:1rem; color:var(--texto); margin-bottom:2px; }
-  .candidato-propuesta { font-size:0.8rem; color:var(--texto-suave); }
-  .candidato-numero { font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--texto-suave); margin-bottom:2px; }
+  .candidato-info { flex:1; min-width:0; }
+  .candidato-numero {
+    font-size:0.68rem; font-weight:600; text-transform:uppercase;
+    letter-spacing:0.08em; color:var(--texto-suave); margin-bottom:1px;
+  }
+  .candidato-nombre { font-weight:600; font-size:0.92rem; color:var(--texto); margin-bottom:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .candidato-grado { font-size:0.75rem; color:var(--texto-suave); }
+
+  .separador-blanco {
+    display:flex; align-items:center; gap:12px; margin:6px 0;
+    color:var(--gris-borde); font-size:0.72rem; text-transform:uppercase;
+    letter-spacing:0.1em; color:#bbb;
+  }
+  .separador-blanco::before, .separador-blanco::after {
+    content:''; flex:1; height:1px; background:var(--gris-borde);
+  }
 
   .check-grande {
     width:80px; height:80px; background:var(--verde); border-radius:50%;
     display:flex; align-items:center; justify-content:center; font-size:36px;
     margin:0 auto 24px; animation:pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
   }
+  .check-grande.blanco { background:#888; }
   @keyframes pop { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
   .confirmacion-centro { text-align:center; }
 
-  /* SPINNER */
   .spinner {
     display:inline-block; width:18px; height:18px;
     border:2px solid rgba(255,255,255,0.4); border-top-color:#fff;
@@ -276,7 +300,7 @@
 
   .admin-modal {
     background:var(--blanco); border-radius:16px; padding:36px;
-    width:100%; max-width:500px; max-height:90vh; overflow-y:auto;
+    width:100%; max-width:560px; max-height:92vh; overflow-y:auto;
     animation:fadeUp 0.3s ease;
   }
 
@@ -288,12 +312,11 @@
   }
   .btn-cerrar:hover { background:var(--gris); }
 
-  .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:24px; }
-  .stat-box { background:var(--gris); border-radius:10px; padding:14px; text-align:center; }
-  .stat-num { font-family:'DM Serif Display',serif; font-size:2rem; color:var(--verde); }
-  .stat-label { font-size:0.72rem; color:var(--texto-suave); text-transform:uppercase; letter-spacing:0.06em; margin-top:2px; }
+  .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+  .stat-box { background:var(--gris); border-radius:10px; padding:12px; text-align:center; }
+  .stat-num { font-family:'DM Serif Display',serif; font-size:1.8rem; color:var(--verde); }
+  .stat-label { font-size:0.68rem; color:var(--texto-suave); text-transform:uppercase; letter-spacing:0.06em; margin-top:2px; }
 
-  /* Badge en tiempo real */
   .badge-live {
     display:inline-flex; align-items:center; gap:6px;
     background:#e8f5e9; border:1px solid #a5d6a7; border-radius:20px;
@@ -305,13 +328,14 @@
   }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-  .resultado-item { margin-bottom:18px; }
-  .resultado-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-  .resultado-nombre { font-weight:500; font-size:0.9rem; color:var(--texto); }
-  .resultado-pct { font-weight:600; font-size:0.9rem; color:var(--verde); }
-  .barra-bg { background:var(--gris); border-radius:4px; height:10px; overflow:hidden; }
+  .resultado-item { margin-bottom:14px; }
+  .resultado-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+  .resultado-nombre { font-weight:500; font-size:0.82rem; color:var(--texto); }
+  .resultado-grado  { font-size:0.72rem; color:var(--texto-suave); }
+  .resultado-pct    { font-weight:600; font-size:0.82rem; color:var(--verde); white-space:nowrap; margin-left:8px; }
+  .barra-bg { background:var(--gris); border-radius:4px; height:8px; overflow:hidden; }
   .barra-fill { height:100%; border-radius:4px; background:var(--verde); transition:width 0.8s cubic-bezier(0.22,1,0.36,1); }
-  .barra-fill.b2{background:var(--azul-info)} .barra-fill.b3{background:#7a2d1a}
+  .barra-blanco { background:#bbb; }
 
   .ganador-badge {
     background:var(--dorado-claro); border:1px solid var(--dorado); border-radius:6px;
@@ -320,19 +344,19 @@
   }
   .ganador-badge strong { font-weight:600; }
 
-  .tabla-votos { width:100%; border-collapse:collapse; font-size:0.82rem; margin-top:16px; }
+  .tabla-votos { width:100%; border-collapse:collapse; font-size:0.8rem; }
   .tabla-votos th {
-    background:var(--gris); padding:8px 10px; text-align:left; font-weight:600;
+    background:var(--gris); padding:7px 8px; text-align:left; font-weight:600;
     color:var(--texto-suave); border-bottom:1px solid var(--gris-borde);
-    font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;
+    font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;
   }
-  .tabla-votos td { padding:8px 10px; border-bottom:1px solid var(--gris-borde); color:var(--texto); }
+  .tabla-votos td { padding:7px 8px; border-bottom:1px solid var(--gris-borde); color:var(--texto); }
   .tabla-votos tr:last-child td { border-bottom:none; }
 
-  .separador { border:none; border-top:1px solid var(--gris-borde); margin:20px 0; }
+  .separador { border:none; border-top:1px solid var(--gris-borde); margin:18px 0; }
 
   .btn-pdf {
-    width:100%; background:var(--dorado); color:#3a2600; border:none; padding:14px;
+    width:100%; background:var(--dorado); color:#3a2600; border:none; padding:13px;
     border-radius:10px; font-family:'DM Sans',sans-serif; font-size:0.9rem;
     font-weight:600; cursor:pointer; transition:background 0.2s; margin-top:8px;
   }
@@ -360,14 +384,14 @@
 
   @media(max-width:480px) {
     header { padding:14px 20px; }
-    .card { padding:24px 20px; }
-    .admin-modal { padding:24px 20px; }
+    .card { padding:22px 16px; }
+    .admin-modal { padding:22px 16px; }
+    .candidato-nombre { font-size:0.85rem; }
   }
 </style>
 </head>
 <body>
 
-<!-- BANNER DE CONEXIÓN -->
 <div id="banner-conexion" class="conectando">⏳ Conectando con Firebase...</div>
 
 <header>
@@ -375,7 +399,7 @@
     <div class="escudo">🏛️</div>
     <h1>
       Elecciones Estudiantiles
-      <span>Sistema de votación digital</span>
+      <span>Sistema de votación digital · 2026</span>
     </h1>
   </div>
   <button class="admin-btn" onclick="abrirAdmin()">⚙ Administrador</button>
@@ -395,7 +419,7 @@
       <div class="input-group">
         <label>Número de DNI</label>
         <input type="text" id="input-dni" maxlength="15" placeholder="00000000"
-          oninput="this.value=this.value.replace(/[^0-9]/,'')"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')"
           onkeydown="if(event.key==='Enter') validarDni()">
       </div>
       <button class="btn-primario" id="btn-continuar" onclick="validarDni()">Continuar →</button>
@@ -406,9 +430,15 @@
   <div class="pantalla" id="pan-votar">
     <div class="card">
       <p class="card-title">Emite tu voto</p>
-      <p class="card-sub">Elige al candidato de tu preferencia. Solo puedes votar una vez.</p>
+      <p class="card-sub">Selecciona al candidato de tu preferencia. Solo puedes votar una vez.</p>
       <div class="dni-badge" id="display-dni">DNI: —</div>
       <div class="msg-error" id="err-voto"></div>
+
+      <div class="candidatos-header">
+        <p>Candidatos</p>
+        <span>7 candidatos + voto en blanco</span>
+      </div>
+
       <div class="candidatos-grid" id="lista-candidatos"></div>
       <button class="btn-primario" id="btn-votar" onclick="confirmarVoto()">Emitir mi voto</button>
       <button class="btn-secundario" onclick="irA('pan-dni')">← Volver</button>
@@ -419,7 +449,7 @@
   <div class="pantalla" id="pan-ok">
     <div class="card">
       <div class="confirmacion-centro">
-        <div class="check-grande">✓</div>
+        <div class="check-grande" id="check-icon">✓</div>
         <p class="card-title" style="text-align:center;margin-bottom:10px">¡Voto registrado!</p>
         <p class="card-sub" style="text-align:center">
           Tu voto fue guardado en la nube exitosamente.<br>
@@ -438,7 +468,6 @@
 <div class="admin-overlay" id="admin-overlay">
   <div class="admin-modal">
 
-    <!-- LOGIN -->
     <div id="admin-login-form">
       <div class="modal-header">
         <span class="modal-title">Administrador</span>
@@ -453,17 +482,14 @@
       <button class="btn-primario" onclick="loginAdmin()">Acceder</button>
     </div>
 
-    <!-- PANEL -->
     <div id="admin-panel">
       <div class="modal-header">
         <span class="modal-title">Panel de resultados</span>
         <button class="btn-cerrar" onclick="cerrarAdmin()">✕</button>
       </div>
 
-      <!-- Live badge -->
       <div class="badge-live"><div class="dot-live"></div> Actualizando en tiempo real</div>
 
-      <!-- Stats -->
       <div class="stats-grid">
         <div class="stat-box">
           <div class="stat-num" id="stat-total">0</div>
@@ -471,31 +497,28 @@
         </div>
         <div class="stat-box">
           <div class="stat-num" id="stat-ganador-votos">—</div>
-          <div class="stat-label">Votos ganador</div>
+          <div class="stat-label">Votos líder</div>
         </div>
         <div class="stat-box">
           <div class="stat-num" id="stat-participacion">—</div>
-          <div class="stat-label">% ganador</div>
+          <div class="stat-label">% líder</div>
         </div>
       </div>
 
-      <!-- Ganador -->
       <div class="ganador-badge" id="ganador-badge" style="display:none">
         <span style="font-size:1.4rem">🏆</span>
         <div>
-          <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Candidato ganador</div>
+          <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Candidato con más votos</div>
           <strong id="ganador-nombre">—</strong>
         </div>
       </div>
 
-      <!-- Barras -->
       <div id="barras-resultados"></div>
 
       <hr class="separador">
 
-      <!-- Tabla votantes -->
-      <p style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--texto-suave);margin-bottom:12px">Registro de votantes</p>
-      <div style="max-height:200px;overflow-y:auto;border:1px solid var(--gris-borde);border-radius:8px">
+      <p style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--texto-suave);margin-bottom:10px">Registro de votantes</p>
+      <div style="max-height:180px;overflow-y:auto;border:1px solid var(--gris-borde);border-radius:8px">
         <table class="tabla-votos">
           <thead>
             <tr><th>#</th><th>DNI</th><th>Candidato</th><th>Hora</th></tr>
@@ -506,7 +529,6 @@
 
       <hr class="separador">
 
-      <!-- Controles -->
       <label style="display:flex;align-items:center;gap:10px;font-size:0.85rem;cursor:pointer;margin-bottom:16px">
         <input type="checkbox" id="chk-cerrar" onchange="toggleCerrar(this.checked)"
           style="width:16px;height:16px;accent-color:var(--verde)">
@@ -529,28 +551,25 @@ let candidatoSeleccionado = null;
 let _datosActuales = { votos: [], estado: { cerrada: false } };
 let _escuchaActiva = false;
 
+const COLORES_AVATAR = ['#1a5c3a','#1a4a7a','#6b3fa0','#a0563f','#2d7a6b','#7a2d5c','#4a6a1a'];
+
 /* ============================================================
-  ESPERAR FIREBASE Y ARRANCAR
+  ARRANQUE
 ============================================================ */
 document.addEventListener('firebase-listo', async () => {
   const banner = document.getElementById('banner-conexion');
-
   if (!window._dbReady) {
     banner.className = 'error';
-    banner.textContent = '❌ Error al conectar con Firebase. Verifica las credenciales en el código.';
+    banner.textContent = '❌ Error al conectar con Firebase. Verifica las credenciales.';
     return;
   }
-
   banner.className = 'ok';
   banner.textContent = '✅ Conectado con Firebase correctamente';
-
-  // Cargar estado inicial
   try {
     const estado = await window.fbLeerEstado();
     _datosActuales.estado = estado;
     aplicarEstado(estado);
   } catch(e) { console.warn("No se pudo leer estado:", e); }
-
   renderCandidatos();
 });
 
@@ -558,17 +577,36 @@ document.addEventListener('firebase-listo', async () => {
   RENDER CANDIDATOS
 ============================================================ */
 function renderCandidatos() {
-  const clases = ['av-1','av-2'];
-  document.getElementById('lista-candidatos').innerHTML =
-    CONFIG.candidatos.map((c,i) => `
+  const candidatosNormales = CONFIG.candidatos.filter(c => !c.esBlanco);
+  const blanco = CONFIG.candidatos.find(c => c.esBlanco);
+
+  let html = candidatosNormales.map((c, i) => {
+    const color = COLORES_AVATAR[i] || COLORES_AVATAR[0];
+    return `
       <div class="candidato-card" id="cand-${c.id}" onclick="seleccionarCandidato(${c.id})">
-        <div class="candidato-avatar ${clases[i]||'av-1'}">${c.nombre.charAt(0)}</div>
+        <div class="candidato-avatar" style="background:${color}">${c.avatar}</div>
         <div class="candidato-info">
-          <div class="candidato-numero">${c.lista}</div>
+          <div class="candidato-numero">${c.propuesta}</div>
           <div class="candidato-nombre">${c.nombre}</div>
-          <div class="candidato-propuesta">${c.propuesta}</div>
+          <div class="candidato-grado">${c.grado}</div>
         </div>
-      </div>`).join('');
+      </div>`;
+  }).join('');
+
+  // Separador y voto en blanco
+  if (blanco) {
+    html += `<div class="separador-blanco">o</div>
+    <div class="candidato-card voto-blanco" id="cand-${blanco.id}" onclick="seleccionarCandidato(${blanco.id})">
+      <div class="candidato-avatar av-blanco">○</div>
+      <div class="candidato-info">
+        <div class="candidato-numero">Opción especial</div>
+        <div class="candidato-nombre">Voto en Blanco</div>
+        <div class="candidato-grado">No expresa preferencia por ningún candidato</div>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('lista-candidatos').innerHTML = html;
 }
 
 function aplicarEstado(estado) {
@@ -598,14 +636,12 @@ async function validarDni() {
     errEl.classList.add('visible');
     return;
   }
-
   if (!window._dbReady) {
     errEl.textContent = 'Sin conexión a Firebase. Verifica las credenciales.';
     errEl.classList.add('visible');
     return;
   }
 
-  // Leer estado actualizado
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Verificando...';
 
@@ -616,21 +652,18 @@ async function validarDni() {
       errEl.classList.add('visible');
       return;
     }
-
     const yaVoto = await window.fbDniYaVoto(dni);
     if (yaVoto) {
       errEl.textContent = `El DNI ${dni} ya emitió su voto. Cada alumno solo puede votar una vez.`;
       errEl.classList.add('visible');
       return;
     }
-
     dniActual = dni;
     candidatoSeleccionado = null;
     document.getElementById('display-dni').textContent = `DNI: ${dni}`;
     document.querySelectorAll('.candidato-card').forEach(c => c.classList.remove('seleccionado'));
     document.getElementById('err-voto').classList.remove('visible');
     irA('pan-votar');
-
   } catch(e) {
     errEl.textContent = 'Error de conexión. Intenta de nuevo.';
     errEl.classList.add('visible');
@@ -653,7 +686,7 @@ async function confirmarVoto() {
   errEl.classList.remove('visible');
 
   if (!candidatoSeleccionado) {
-    errEl.textContent = 'Debes seleccionar un candidato antes de votar.';
+    errEl.textContent = 'Debes seleccionar un candidato o la opción de voto en blanco antes de continuar.';
     errEl.classList.add('visible');
     return;
   }
@@ -671,10 +704,16 @@ async function confirmarVoto() {
     });
 
     const cand = CONFIG.candidatos.find(c => c.id === candidatoSeleccionado);
-    document.getElementById('confirm-candidato').textContent =
-      `Votaste por: ${cand.nombre} (${cand.lista})`;
-    irA('pan-ok');
+    const esBlanco = cand && cand.esBlanco;
 
+    const checkIcon = document.getElementById('check-icon');
+    checkIcon.className = 'check-grande' + (esBlanco ? ' blanco' : '');
+
+    document.getElementById('confirm-candidato').textContent = esBlanco
+      ? 'Emitiste un voto en blanco.'
+      : `Votaste por: ${cand.nombre} · ${cand.grado}`;
+
+    irA('pan-ok');
   } catch(e) {
     errEl.textContent = 'Error al guardar el voto. Verifica la conexión e intenta de nuevo.';
     errEl.classList.add('visible');
@@ -721,7 +760,6 @@ function loginAdmin() {
   iniciarEscuchaAdmin();
 }
 
-// Escucha en tiempo real solo cuando el admin está abierto
 function iniciarEscuchaAdmin() {
   if (_escuchaActiva) return;
   _escuchaActiva = true;
@@ -736,20 +774,22 @@ function iniciarEscuchaAdmin() {
 function renderPanel(data) {
   const votos = data.votos || [];
   const total = votos.length;
-
   document.getElementById('stat-total').textContent = total;
 
   const conteo = {};
   CONFIG.candidatos.forEach(c => conteo[c.id] = 0);
   votos.forEach(v => { if (conteo[v.candidato_id] !== undefined) conteo[v.candidato_id]++; });
 
+  // Líder (excluyendo voto en blanco para el podio)
   let maxV = 0, ganadorId = null;
-  CONFIG.candidatos.forEach(c => { if (conteo[c.id] > maxV) { maxV = conteo[c.id]; ganadorId = c.id; } });
+  CONFIG.candidatos.filter(c => !c.esBlanco).forEach(c => {
+    if (conteo[c.id] > maxV) { maxV = conteo[c.id]; ganadorId = c.id; }
+  });
 
-  if (total > 0 && ganadorId) {
+  if (total > 0 && ganadorId && maxV > 0) {
     const g = CONFIG.candidatos.find(c => c.id === ganadorId);
     document.getElementById('ganador-badge').style.display = 'flex';
-    document.getElementById('ganador-nombre').textContent = `${g.nombre} — ${conteo[ganadorId]} votos`;
+    document.getElementById('ganador-nombre').textContent = `${g.nombre} — ${conteo[ganadorId]} voto${conteo[ganadorId]!==1?'s':''}`;
     document.getElementById('stat-ganador-votos').textContent = conteo[ganadorId];
     document.getElementById('stat-participacion').textContent = Math.round((conteo[ganadorId]/total)*100) + '%';
   } else {
@@ -758,29 +798,59 @@ function renderPanel(data) {
     document.getElementById('stat-participacion').textContent = '—';
   }
 
-  const clasesBarra = ['','b2'];
-  document.getElementById('barras-resultados').innerHTML = CONFIG.candidatos.map((c,i) => {
+  // Barras de resultados
+  const normales = CONFIG.candidatos.filter(c => !c.esBlanco);
+  const blanco   = CONFIG.candidatos.find(c => c.esBlanco);
+
+  let barrasHtml = normales.map((c, i) => {
     const v = conteo[c.id];
     const p = total > 0 ? Math.round((v/total)*100) : 0;
+    const color = COLORES_AVATAR[i] || COLORES_AVATAR[0];
     return `<div class="resultado-item">
       <div class="resultado-header">
-        <span class="resultado-nombre">${c.nombre} <span style="font-size:.75rem;color:var(--texto-suave)">(${c.lista})</span></span>
-        <span class="resultado-pct">${v} votos · ${p}%</span>
+        <div>
+          <div class="resultado-nombre">${c.nombre}</div>
+          <div class="resultado-grado">${c.grado} · ${c.propuesta}</div>
+        </div>
+        <span class="resultado-pct">${v} · ${p}%</span>
       </div>
-      <div class="barra-bg"><div class="barra-fill ${clasesBarra[i]}" style="width:${p}%"></div></div>
+      <div class="barra-bg">
+        <div class="barra-fill" style="width:${p}%;background:${color}"></div>
+      </div>
     </div>`;
   }).join('');
 
+  // Barra voto en blanco
+  if (blanco) {
+    const v = conteo[blanco.id];
+    const p = total > 0 ? Math.round((v/total)*100) : 0;
+    barrasHtml += `<div class="resultado-item" style="opacity:0.75">
+      <div class="resultado-header">
+        <div>
+          <div class="resultado-nombre">Voto en Blanco</div>
+        </div>
+        <span class="resultado-pct" style="color:#888">${v} · ${p}%</span>
+      </div>
+      <div class="barra-bg">
+        <div class="barra-fill barra-blanco" style="width:${p}%"></div>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('barras-resultados').innerHTML = barrasHtml;
+
+  // Tabla de votantes
   const tbody = document.getElementById('tbody-votantes');
   if (votos.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--texto-suave);padding:16px">No hay votos registrados aún.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--texto-suave);padding:14px">No hay votos registrados aún.</td></tr>';
   } else {
-    tbody.innerHTML = [...votos].reverse().map((v,i) => {
+    tbody.innerHTML = [...votos].reverse().map((v, i) => {
       const c = CONFIG.candidatos.find(x => x.id === v.candidato_id);
+      const nombre = c ? (c.esBlanco ? 'Voto en Blanco' : c.nombre) : '—';
       return `<tr>
         <td>${votos.length - i}</td>
-        <td style="font-family:monospace;letter-spacing:.05em">${v.dni}</td>
-        <td>${c ? c.nombre : '—'}</td>
+        <td style="font-family:monospace;letter-spacing:.04em">${v.dni}</td>
+        <td>${nombre}</td>
         <td style="color:var(--texto-suave)">${v.hora || '—'}</td>
       </tr>`;
     }).join('');
@@ -797,15 +867,9 @@ async function toggleCerrar(cerrada) {
 async function reiniciarVotos() {
   if (!confirm('¿Estás seguro? Esto eliminará TODOS los votos. No se puede deshacer.')) return;
   try {
-    const { getDatabase, ref, remove } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
-    const { ref: dbRef, remove: dbRemove } = { ref, remove };
-    // Limpiar votos y estado
-    await window.fbGuardarEstado({ cerrada: false });
-    const snap = await window.fbLeerVotos();
-    // Usando set para limpiar todo el nodo de votos
-    const { set } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
     const dbModule = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
     await dbModule.set(dbModule.ref(window._db, 'votos'), null);
+    await window.fbGuardarEstado({ cerrada: false });
     document.getElementById('banner-cerrada').classList.remove('visible');
     alert('Votos reiniciados correctamente.');
   } catch(e) {
@@ -815,19 +879,22 @@ async function reiniciarVotos() {
 }
 
 /* ============================================================
-  EXPORTAR PDF
+  PDF
 ============================================================ */
 function descargarPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
   const votos = _datosActuales.votos || [];
   const total = votos.length;
+
   const conteo = {};
   CONFIG.candidatos.forEach(c => conteo[c.id] = 0);
   votos.forEach(v => { if (conteo[v.candidato_id] !== undefined) conteo[v.candidato_id]++; });
 
   let maxV = 0, ganadorId = null;
-  CONFIG.candidatos.forEach(c => { if (conteo[c.id] > maxV) { maxV = conteo[c.id]; ganadorId = c.id; } });
+  CONFIG.candidatos.filter(c => !c.esBlanco).forEach(c => {
+    if (conteo[c.id] > maxV) { maxV = conteo[c.id]; ganadorId = c.id; }
+  });
   const ganador = ganadorId ? CONFIG.candidatos.find(c => c.id === ganadorId) : null;
 
   const fechaHoy = new Date().toLocaleDateString('es',{year:'numeric',month:'long',day:'numeric'});
@@ -835,11 +902,12 @@ function descargarPDF() {
   const margen = 20, anchoUtil = 170;
   let y = margen;
 
+  // Encabezado
   doc.setFillColor(26,92,58); doc.rect(0,0,210,38,'F');
   doc.setFillColor(201,168,76); doc.rect(0,38,210,2,'F');
   doc.setTextColor(255,255,255);
-  doc.setFontSize(16); doc.setFont('helvetica','bold');
-  doc.text('REPORTE DE ELECCIONES ESTUDIANTILES',105,15,{align:'center'});
+  doc.setFontSize(15); doc.setFont('helvetica','bold');
+  doc.text('REPORTE DE ELECCIONES ESTUDIANTILES',105,14,{align:'center'});
   doc.setFontSize(9); doc.setFont('helvetica','normal');
   doc.text(CONFIG.colegio,105,22,{align:'center'});
   doc.text(`Año ${CONFIG.anio}   ·   Generado el ${fechaHoy} a las ${horaHoy}`,105,29,{align:'center'});
@@ -850,27 +918,30 @@ function descargarPDF() {
 
   const cajas = [
     {label:'Total de votos', valor:String(total)},
-    {label:'Candidatos',     valor:String(CONFIG.candidatos.length)},
+    {label:'Candidatos',     valor:'7'},
     {label:'Estado',         valor:_datosActuales.estado?.cerrada ? 'Cerrada':'Abierta'}
   ];
   const anchoCaja = anchoUtil/3 - 4;
   cajas.forEach((c,i) => {
     const x = margen + i*(anchoCaja+6);
     doc.setFillColor(240,250,245); doc.roundedRect(x,y,anchoCaja,22,3,3,'FD');
-    doc.setFontSize(16); doc.setFont('helvetica','bold'); doc.setTextColor(26,92,58);
+    doc.setFontSize(15); doc.setFont('helvetica','bold'); doc.setTextColor(26,92,58);
     doc.text(c.valor, x+anchoCaja/2, y+12, {align:'center'});
-    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(100,100,95);
+    doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(100,100,95);
     doc.text(c.label.toUpperCase(), x+anchoCaja/2, y+19, {align:'center'});
   });
   y += 30;
 
-  if (ganador && total > 0) {
+  if (ganador && total > 0 && maxV > 0) {
     doc.setFillColor(240,217,138); doc.setDrawColor(201,168,76); doc.setLineWidth(0.5);
     doc.roundedRect(margen,y,anchoUtil,16,3,3,'FD');
     doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(90,61,0);
     doc.text('GANADOR:',margen+6,y+7);
     doc.setFont('helvetica','normal');
-    doc.text(`${ganador.nombre}  (${conteo[ganadorId]} votos · ${Math.round((conteo[ganadorId]/total)*100)}%)`,margen+38,y+7);
+    const pctGanador = Math.round((conteo[ganadorId]/total)*100);
+    doc.text(`${ganador.nombre}  (${conteo[ganadorId]} votos · ${pctGanador}%)`,margen+38,y+7);
+    doc.setFontSize(8); doc.setTextColor(130,90,0);
+    doc.text(ganador.grado,margen+38,y+13);
     y += 22;
   }
 
@@ -878,37 +949,55 @@ function descargarPDF() {
   doc.text('RESULTADOS POR CANDIDATO',margen,y); y += 7;
 
   CONFIG.candidatos.forEach((c,i) => {
+    if(y > 268){ doc.addPage(); y = margen; }
     const v = conteo[c.id];
     const p = total > 0 ? Math.round((v/total)*100) : 0;
-    const cols = [[26,92,58],[26,74,122]];
-    doc.setFontSize(9); doc.setFont('helvetica', c.id===ganadorId&&total>0?'bold':'normal'); doc.setTextColor(26,26,24);
-    doc.text(`${c.lista} — ${c.nombre}`,margen,y+4);
+    const esGanador = c.id === ganadorId && !c.esBlanco && total > 0;
+    doc.setFontSize(8.5); doc.setFont('helvetica', esGanador ? 'bold':'normal'); doc.setTextColor(26,26,24);
+    const etiqueta = c.esBlanco ? 'Voto en Blanco' : `${c.propuesta} — ${c.nombre}`;
+    doc.text(etiqueta, margen, y+4);
+    if (!c.esBlanco) {
+      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(120,120,115);
+      doc.text(c.grado, margen, y+9);
+    }
     doc.setTextColor(100,100,95); doc.setFont('helvetica','normal'); doc.setFontSize(8);
     doc.text(`${v} votos · ${p}%`,190,y+4,{align:'right'});
-    doc.setFillColor(230,230,225); doc.roundedRect(margen,y+6,anchoUtil,5,1,1,'F');
-    if(p>0){ doc.setFillColor(...(cols[i]||cols[0])); doc.roundedRect(margen,y+6,anchoUtil*p/100,5,1,1,'F'); }
-    y += 16;
+    const barY = c.esBlanco ? y+5 : y+11;
+    doc.setFillColor(230,230,225); doc.roundedRect(margen,barY,anchoUtil,4,1,1,'F');
+    if(p>0){
+      if(c.esBlanco){ doc.setFillColor(180,180,180); }
+      else {
+        const colores = [[26,92,58],[26,74,122],[107,63,160],[160,86,63],[45,122,107],[122,45,92],[74,106,26]];
+        doc.setFillColor(...(colores[i] || colores[0]));
+      }
+      doc.roundedRect(margen,barY,anchoUtil*p/100,4,1,1,'F');
+    }
+    y += c.esBlanco ? 12 : 18;
   });
-  y += 6;
 
+  y += 4;
   if (votos.length > 0) {
+    if(y > 255){ doc.addPage(); y = margen; }
     doc.setTextColor(26,92,58); doc.setFontSize(11); doc.setFont('helvetica','bold');
     doc.text('REGISTRO DE VOTANTES',margen,y); y += 7;
     doc.setFillColor(26,92,58); doc.rect(margen,y,anchoUtil,8,'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
-    [['#',margen+2],['DNI',margen+14],['Candidato votado',margen+80],['Hora',margen+148]].forEach(([h,x])=>doc.text(h,x,y+5.5));
+    doc.setTextColor(255,255,255); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    [['#',margen+2],['DNI',margen+12],['Candidato',margen+60],['Hora',margen+152]].forEach(([h,x])=>doc.text(h,x,y+5.5));
     y += 8;
 
     votos.forEach((v,idx) => {
-      if(y>270){ doc.addPage(); y=margen; }
-      const c = CONFIG.candidatos.find(x=>x.id===v.candidato_id);
+      if(y > 270){ doc.addPage(); y = margen; }
+      const c = CONFIG.candidatos.find(x => x.id === v.candidato_id);
+      const nombre = c ? (c.esBlanco ? 'Voto en Blanco' : c.nombre) : '—';
       doc.setFillColor(...(idx%2===0?[248,248,245]:[255,255,255]));
       doc.rect(margen,y,anchoUtil,7,'F');
-      doc.setTextColor(40,40,38); doc.setFont('helvetica','normal'); doc.setFontSize(8);
+      doc.setTextColor(40,40,38); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
       doc.text(String(idx+1),margen+2,y+5);
-      doc.text(v.dni,margen+14,y+5);
-      doc.text(c?c.nombre:'—',margen+80,y+5);
-      doc.text(v.hora||'—',margen+148,y+5);
+      doc.text(v.dni,margen+12,y+5);
+      // Truncar nombre si es muy largo
+      const nombreCorto = nombre.length > 38 ? nombre.substring(0,36)+'…' : nombre;
+      doc.text(nombreCorto,margen+60,y+5);
+      doc.text(v.hora||'—',margen+152,y+5);
       doc.setDrawColor(230,230,225); doc.setLineWidth(0.2);
       doc.line(margen,y+7,margen+anchoUtil,y+7);
       y += 7;
@@ -926,7 +1015,6 @@ function descargarPDF() {
   doc.save(`resultados-elecciones-${CONFIG.anio}.pdf`);
 }
 
-// Cierra modal al hacer clic fuera
 document.getElementById('admin-overlay').addEventListener('click', function(e){
   if(e.target===this) cerrarAdmin();
 });
