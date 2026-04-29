@@ -23,7 +23,7 @@
   };
 
   window.CONFIG = {
-    colegio:     "Instituto Nacional de Educación",
+    colegio:     "Instituto Potrerillos Mineral",
     anio:        "2026",
     clave_admin: "admin2026",
     candidatos: [
@@ -709,9 +709,7 @@ async function confirmarVoto() {
     const checkIcon = document.getElementById('check-icon');
     checkIcon.className = 'check-grande' + (esBlanco ? ' blanco' : '');
 
-    document.getElementById('confirm-candidato').textContent = esBlanco
-      ? 'Emitiste un voto en blanco.'
-      : `Votaste por: ${cand.nombre} · ${cand.grado}`;
+    document.getElementById('confirm-candidato').textContent = '';
 
     irA('pan-ok');
   } catch(e) {
